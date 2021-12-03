@@ -12,7 +12,8 @@
       "program": "${fileDirname}",
       "env": {
         "HTTP_LISTEN_PORT": 8089,
-        "GRPC_LISTEN_PORT": 8086
+        "GRPC_LISTEN_PORT": 8086,
+        "NODE_ID": "node-0"
       }
     }
   ]

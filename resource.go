@@ -37,6 +37,7 @@ type EdsResource struct {
 	ListenerName string
 	ListenerPort uint32
 	WebServer    *HttpServer
+	NodeId       string
 }
 
 func (er *EdsResource) makeCluster() *cluster.Cluster {
@@ -53,7 +54,7 @@ func (er *EdsResource) makeCluster() *cluster.Cluster {
 func (er *EdsResource) makeEndpoint(clusterName string) *endpoint.ClusterLoadAssignment {
 	return &endpoint.ClusterLoadAssignment{
 		ClusterName: clusterName,
-		Endpoints:    []*endpoint.LocalityLbEndpoints{{
+		Endpoints: []*endpoint.LocalityLbEndpoints{{
 			LbEndpoints: er.WebServer.GetEndpoints(),
 		}},
 	}

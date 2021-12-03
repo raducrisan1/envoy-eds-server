@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"sync"
 
@@ -23,7 +24,8 @@ type KeyedEdsTarget struct {
 type HttpServer struct {
 	AllTargets map[string]EdsTarget
 	mutex      *sync.Mutex
-	Cache      cache.SnapshotCache
+	DataCache  *cache.SnapshotCache
+	Eds        *EdsResource
 }
 
 func NewHttpServer() *HttpServer {
@@ -68,8 +70,9 @@ func (s *HttpServer) Post(key string, target KeyedEdsTarget) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.AllTargets[key] = toEdsTarget(target)
+	snapshot := s.Eds.GenerateSnapshot()
 
-	return nil
+	return (*s.DataCache).SetSnapshot(context.Background(), s.Eds.NodeId, snapshot)
 }
 
 func (s *HttpServer) Delete(key string) error {

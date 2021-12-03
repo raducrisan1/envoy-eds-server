@@ -38,7 +38,7 @@ func main() {
 		}
 		err := httpServer.Post(target.Key, target)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"result": "invalid key"})
+			c.JSON(http.StatusBadRequest, gin.H{"result": fmt.Sprintf("Error: %v", err)})
 			return
 		}
 		c.JSON(http.StatusAccepted, gin.H{"result": "ok"})
@@ -60,6 +60,7 @@ func main() {
 		log.Fatal("please provide a valid environment variable HTTP_LISTEN_PORT")
 		return
 	}
+	nodeID := os.Getenv("NODE_ID")
 	stringGrpcPort := os.Getenv("GRPC_LISTEN_PORT")
 	intGrpcPort, err := strconv.Atoi(stringGrpcPort)
 	if err != nil {
@@ -72,8 +73,9 @@ func main() {
 		ListenerName: "listener_0",
 		ClusterName:  "hpc_cluster",
 		WebServer:    httpServer,
+		NodeId:       nodeID,
 	}
-	
+
 	stop := make(chan int)
 
 	go func() {
@@ -82,19 +84,24 @@ func main() {
 
 	go func() {
 		l := Logger{}
-		cache := cache.NewSnapshotCache(false, cache.IDHash{}, l)
+		datacache := cache.NewSnapshotCache(false, cache.IDHash{}, l)
 		snapshot := edsResource.GenerateSnapshot()
 		if err := snapshot.Consistent(); err != nil {
 			l.Errorf("snapshot inconsistency: %+v\n%+v", snapshot, err)
 			os.Exit(1)
 		}
-		httpServer.Cache = cache
+		httpServer.DataCache = &datacache
+		httpServer.Eds = &edsResource
 		ctx := context.Background()
+		if err := datacache.SetSnapshot(ctx, nodeID, snapshot); err != nil {
+			l.Errorf("snapshot error %q for %+v", err, snapshot)
+			os.Exit(1)
+		}
 		cb := &test.Callbacks{
 			Fetches:  0,
 			Requests: 0,
 		}
-		grpcServer := server.NewServer(ctx, cache, cb)
+		grpcServer := server.NewServer(ctx, datacache, cb)
 		RunGrpcServer(ctx, grpcServer, uint(intGrpcPort))
 		stop <- 1
 	}()
