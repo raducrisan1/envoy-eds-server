@@ -71,6 +71,7 @@ func main() {
 		ClusterName: "hpc_cluster",
 		WebServer:   httpServer,
 		NodeId:      nodeID,
+		SnapshotVersion: 1,
 	}
 
 	stop := make(chan int)
@@ -93,6 +94,7 @@ func main() {
 		cb := &test.Callbacks{
 			Fetches:  0,
 			Requests: 0,
+
 		}
 		grpcServer := server.NewServer(ctx, datacache, cb)
 		RunGrpcServer(ctx, grpcServer, uint(intGrpcPort))

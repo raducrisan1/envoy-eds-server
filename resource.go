@@ -14,6 +14,8 @@
 package main
 
 import (
+	"strconv"
+
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/types"
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
@@ -21,9 +23,10 @@ import (
 )
 
 type EdsResource struct {
-	ClusterName string
-	WebServer   *HttpServer
-	NodeId      string
+	ClusterName     string
+	WebServer       *HttpServer
+	NodeId          string
+	SnapshotVersion int
 }
 
 func (er *EdsResource) makeEndpoint() *endpoint.ClusterLoadAssignment {
@@ -36,10 +39,11 @@ func (er *EdsResource) makeEndpoint() *endpoint.ClusterLoadAssignment {
 }
 
 func (er *EdsResource) GenerateSnapshot() cache.Snapshot {
-	snap, _ := cache.NewSnapshot("1",
+	snap, _ := cache.NewSnapshot(strconv.Itoa(er.SnapshotVersion),
 		map[resource.Type][]types.Resource{
 			resource.EndpointType: {er.makeEndpoint()},
 		},
 	)
+	er.SnapshotVersion++
 	return snap
 }

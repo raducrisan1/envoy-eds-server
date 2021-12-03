@@ -83,7 +83,8 @@ func (s *HttpServer) Delete(key string) error {
 	defer s.mutex.Unlock()
 	if _, ok := s.AllTargets[key]; ok {
 		delete(s.AllTargets, key)
-		return nil
+		snapshot := s.Eds.GenerateSnapshot()
+		return (*s.DataCache).SetSnapshot(context.Background(), s.Eds.NodeId, snapshot)
 	}
 	return errors.New("the key does not exist")
 }
