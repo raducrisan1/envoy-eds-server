@@ -10,3 +10,4 @@
 .history/
 
 __debug_bin
+envoy-eds-server
