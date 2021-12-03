@@ -36,8 +36,7 @@ type EdsResource struct {
 	RouteName    string
 	ListenerName string
 	ListenerPort uint32
-	UpstreamHost string
-	UpstreamPort uint32
+	WebServer    *HttpServer
 }
 
 func (er *EdsResource) makeCluster() *cluster.Cluster {
@@ -54,24 +53,8 @@ func (er *EdsResource) makeCluster() *cluster.Cluster {
 func (er *EdsResource) makeEndpoint(clusterName string) *endpoint.ClusterLoadAssignment {
 	return &endpoint.ClusterLoadAssignment{
 		ClusterName: clusterName,
-		Endpoints: []*endpoint.LocalityLbEndpoints{{
-			LbEndpoints: []*endpoint.LbEndpoint{{
-				HostIdentifier: &endpoint.LbEndpoint_Endpoint{
-					Endpoint: &endpoint.Endpoint{
-						Address: &core.Address{
-							Address: &core.Address_SocketAddress{
-								SocketAddress: &core.SocketAddress{
-									Protocol: core.SocketAddress_TCP,
-									Address:  er.UpstreamHost,
-									PortSpecifier: &core.SocketAddress_PortValue{
-										PortValue: er.UpstreamPort,
-									},
-								},
-							},
-						},
-					},
-				},
-			}},
+		Endpoints:    []*endpoint.LocalityLbEndpoints{{
+			LbEndpoints: er.WebServer.GetEndpoints(),
 		}},
 	}
 }
@@ -92,9 +75,6 @@ func (er *EdsResource) makeRoute() *route.RouteConfiguration {
 					Route: &route.RouteAction{
 						ClusterSpecifier: &route.RouteAction_Cluster{
 							Cluster: er.ClusterName,
-						},
-						HostRewriteSpecifier: &route.RouteAction_HostRewriteLiteral{
-							HostRewriteLiteral: er.UpstreamHost,
 						},
 					},
 				},

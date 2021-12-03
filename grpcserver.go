@@ -38,8 +38,8 @@ func registerServer(grpcServer *grpc.Server, server server.Server) {
 	runtimeservice.RegisterRuntimeDiscoveryServiceServer(grpcServer, server)
 }
 
-// RunServer starts an xDS server at the given port.
-func RunServer(ctx context.Context, srv server.Server, port uint) {
+// RunGrpcServer starts an xDS server at the given port.
+func RunGrpcServer(ctx context.Context, srv server.Server, port uint) {
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
 	// a single connection to the management server, then it might lead to
