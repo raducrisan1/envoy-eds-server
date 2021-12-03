@@ -68,12 +68,9 @@ func main() {
 		return
 	}
 	edsResource := EdsResource{
-		ListenerPort: uint32(intGrpcPort),
-		RouteName:    "local_route",
-		ListenerName: "listener_0",
-		ClusterName:  "hpc_cluster",
-		WebServer:    httpServer,
-		NodeId:       nodeID,
+		ClusterName: "hpc_cluster",
+		WebServer:   httpServer,
+		NodeId:      nodeID,
 	}
 
 	stop := make(chan int)
@@ -86,10 +83,6 @@ func main() {
 		l := Logger{}
 		datacache := cache.NewSnapshotCache(false, cache.IDHash{}, l)
 		snapshot := edsResource.GenerateSnapshot()
-		if err := snapshot.Consistent(); err != nil {
-			l.Errorf("snapshot inconsistency: %+v\n%+v", snapshot, err)
-			os.Exit(1)
-		}
 		httpServer.DataCache = &datacache
 		httpServer.Eds = &edsResource
 		ctx := context.Background()
