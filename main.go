@@ -77,6 +77,7 @@ func main() {
 	stop := make(chan int)
 
 	go func() {
+		log.Printf("EDS Server is listening for incoming HTTP requests on port %d", intHttpPort)
 		endless.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", intHttpPort), router)
 	}()
 

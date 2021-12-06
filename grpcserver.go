@@ -60,7 +60,7 @@ func RunGrpcServer(ctx context.Context, srv server.Server, port uint) {
 
 	registerServer(grpcServer, srv)
 
-	log.Printf("management server listening on %d\n", port)
+	log.Printf("EDS Server is listening for incoming GRPC requests from Envoy on port %d", port)
 	if err = grpcServer.Serve(lis); err != nil {
 		log.Println(err)
 	}
