@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
+	"sort"
 	"sync"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -13,6 +15,20 @@ import (
 type EdsTarget struct {
 	Address string `json:"address"`
 	Port    uint32 `json:"port"`
+}
+
+type EdsTargets []EdsTarget
+
+func(e EdsTargets) Len() int {
+	return len(e)
+}
+
+func(e EdsTargets) Less(i, j int) bool {
+	return fmt.Sprintf("%s:%d", e[i].Address, e[i].Port) < fmt.Sprintf("%s:%d", e[j].Address, e[j].Port)
+}
+
+func (e EdsTargets) Swap(i, j int) {
+	e[i], e[j] = e[j], e[i]
 }
 
 type KeyedEdsTarget struct {
@@ -39,14 +55,16 @@ func (s *HttpServer) Initialize() {
 	s.mutex = &sync.Mutex{}
 }
 
-func (s *HttpServer) List() []EdsTarget {
+func (s *HttpServer) List() EdsTargets {
 	rsp := make([]EdsTarget, len(s.AllTargets))
 	i := 0
 	for _, val := range s.AllTargets {
 		rsp[i] = val
 		i++
 	}
-	return rsp
+	var r EdsTargets = rsp
+	sort.Sort(r)
+	return r
 }
 
 func (s *HttpServer) Get(key string) (*EdsTarget, bool) {
