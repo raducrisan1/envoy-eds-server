@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"sort"
 	"sync"
+	"time"
 
 	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
@@ -13,17 +14,18 @@ import (
 )
 
 type EdsTarget struct {
-	Address string `json:"address"`
-	Port    uint32 `json:"port"`
+	Address           string `json:"address"`
+	Port              uint32 `json:"port"`
+	LastPingTimestamp time.Time
 }
 
 type EdsTargets []EdsTarget
 
-func(e EdsTargets) Len() int {
+func (e EdsTargets) Len() int {
 	return len(e)
 }
 
-func(e EdsTargets) Less(i, j int) bool {
+func (e EdsTargets) Less(i, j int) bool {
 	return fmt.Sprintf("%s:%d", e[i].Address, e[i].Port) < fmt.Sprintf("%s:%d", e[j].Address, e[j].Port)
 }
 
@@ -38,10 +40,11 @@ type KeyedEdsTarget struct {
 }
 
 type HttpServer struct {
-	AllTargets map[string]EdsTarget
-	mutex      *sync.Mutex
-	DataCache  *cache.SnapshotCache
-	Eds        *EdsResource
+	AllTargets      map[string]EdsTarget
+	mutex           *sync.Mutex
+	DataCache       *cache.SnapshotCache
+	Eds             *EdsResource
+	EvictionTimeout int
 }
 
 func NewHttpServer() *HttpServer {
@@ -76,8 +79,9 @@ func (s *HttpServer) Get(key string) (*EdsTarget, bool) {
 
 func toEdsTarget(src KeyedEdsTarget) EdsTarget {
 	return EdsTarget{
-		Address: src.Address,
-		Port:    src.Port,
+		Address:           src.Address,
+		Port:              src.Port,
+		LastPingTimestamp: time.Now(),
 	}
 }
 
@@ -105,6 +109,18 @@ func (s *HttpServer) Delete(key string) error {
 		return (*s.DataCache).SetSnapshot(context.Background(), s.Eds.NodeId, snapshot)
 	}
 	return errors.New("the key does not exist")
+}
+
+func (s *HttpServer) EvictHeartbeatTimeout() {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	refTime := time.Now()
+	for key, value := range s.AllTargets {
+		elapsed := refTime.Sub(value.LastPingTimestamp)
+		if elapsed.Seconds() > float64(s.EvictionTimeout) {
+			delete(s.AllTargets, key)
+		}
+	}
 }
 
 func (s *HttpServer) GetEndpoints() []*endpoint.LbEndpoint {

@@ -22,19 +22,23 @@ const (
 	grpcMaxConcurrentStreams = 1000000
 )
 
-func registerServer(grpcServer *grpc.Server, server server.Server) {
-	// register services
-	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(grpcServer, server)
-	endpointservice.RegisterEndpointDiscoveryServiceServer(grpcServer, server)
-	// clusterservice.RegisterClusterDiscoveryServiceServer(grpcServer, server)
-	// routeservice.RegisterRouteDiscoveryServiceServer(grpcServer, server)
-	// listenerservice.RegisterListenerDiscoveryServiceServer(grpcServer, server)
-	// secretservice.RegisterSecretDiscoveryServiceServer(grpcServer, server)
-	// runtimeservice.RegisterRuntimeDiscoveryServiceServer(grpcServer, server)
+type CustomEdsServer struct {
+	GrpcServer *grpc.Server
 }
 
-// RunGrpcServer starts an xDS server at the given port.
-func RunGrpcServer(ctx context.Context, srv server.Server, port uint) {
+func (s *CustomEdsServer) Shutdown() {
+	if s.GrpcServer != nil {
+		s.GrpcServer.Stop()
+	}
+}
+
+func (s *CustomEdsServer) registerServer(server server.Server) {
+	// register services
+	discoverygrpc.RegisterAggregatedDiscoveryServiceServer(s.GrpcServer, server)
+	endpointservice.RegisterEndpointDiscoveryServiceServer(s.GrpcServer, server)
+}
+
+func (s *CustomEdsServer) Initialize() {
 	// gRPC golang library sets a very small upper bound for the number gRPC/h2
 	// streams over a single TCP connection. If a proxy multiplexes requests over
 	// a single connection to the management server, then it might lead to
@@ -51,17 +55,21 @@ func RunGrpcServer(ctx context.Context, srv server.Server, port uint) {
 			PermitWithoutStream: true,
 		}),
 	)
-	grpcServer := grpc.NewServer(grpcOptions...)
+	s.GrpcServer = grpc.NewServer(grpcOptions...)
+}
+
+// RunGrpcServer starts an xDS server at the given port.
+func (s *CustomEdsServer) RunGrpcServer(ctx context.Context, srv server.Server, port uint) {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	registerServer(grpcServer, srv)
+	s.registerServer(srv)
 
 	log.Printf("EDS Server is listening for incoming GRPC requests from Envoy on port %d", port)
-	if err = grpcServer.Serve(lis); err != nil {
+	if err = s.GrpcServer.Serve(lis); err != nil {
 		log.Println(err)
 	}
 }

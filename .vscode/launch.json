@@ -13,7 +13,8 @@
       "env": {
         "HTTP_LISTEN_PORT": 8089,
         "GRPC_LISTEN_PORT": 8086,
-        "NODE_ID": "node-0"
+        "NODE_ID": "node-0",
+        "EVICTION_TIMEOUT_IN_SEC": 10,
       }
     }
   ]

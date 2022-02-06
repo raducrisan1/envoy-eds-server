@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/envoyproxy/go-control-plane/pkg/cache/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/server/v3"
@@ -67,18 +68,37 @@ func main() {
 		log.Fatal("please provide a valid environment variable GRPC_LISTEN_PORT")
 		return
 	}
+	stringEvictionTimeout := os.Getenv("EVICTION_TIMEOUT_IN_SEC")
+	var intEvictionTimeout int
+	if stringEvictionTimeout == "" {
+		intEvictionTimeout = 42
+	} else {
+		intEvictionTimeout, err = strconv.Atoi(stringEvictionTimeout)
+		if err != nil {
+			log.Fatal("please provide a valid numeric value of seconds for environment variable EVICTION_TIMEOUT_IN_SEC")
+			return
+		}
+	}
+	httpServer.EvictionTimeout = intEvictionTimeout
 	edsResource := EdsResource{
-		ClusterName: "hpc_cluster",
-		WebServer:   httpServer,
-		NodeId:      nodeID,
+		ClusterName:     "cluster",
+		WebServer:       httpServer,
+		NodeId:          nodeID,
 		SnapshotVersion: 1,
 	}
 
-	stop := make(chan int)
+	stopChan := make(chan int)
+	completionChan := make(chan int, 2)
+	evictionTicker := time.NewTicker(time.Second)
+
+	var edsServer server.Server
+	customEdsServer := CustomEdsServer{}
 
 	go func() {
 		log.Printf("EDS Server is listening for incoming HTTP requests on port %d", intHttpPort)
 		endless.ListenAndServe(fmt.Sprintf("0.0.0.0:%d", intHttpPort), router)
+		customEdsServer.Shutdown()
+		stopChan <- 1
 	}()
 
 	go func() {
@@ -95,11 +115,28 @@ func main() {
 		cb := &test.Callbacks{
 			Fetches:  0,
 			Requests: 0,
-
 		}
-		grpcServer := server.NewServer(ctx, datacache, cb)
-		RunGrpcServer(ctx, grpcServer, uint(intGrpcPort))
-		stop <- 1
+		edsServer = server.NewServer(ctx, datacache, cb)
+		customEdsServer.Initialize()
+		customEdsServer.RunGrpcServer(ctx, edsServer, uint(intGrpcPort))
+		completionChan <- 1
 	}()
-	<-stop
+
+	go func() {
+		exit := false
+		for !exit {
+			select {
+			case <-evictionTicker.C:
+				httpServer.EvictHeartbeatTimeout()
+				continue
+			case <-stopChan:
+				exit = true
+				evictionTicker.Stop()
+			}
+		}
+		completionChan <- 1
+	}()
+
+	<-completionChan
+	<-completionChan
 }

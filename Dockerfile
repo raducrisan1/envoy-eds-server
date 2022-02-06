@@ -15,7 +15,8 @@ RUN apk --update upgrade && \
 WORKDIR /app
 COPY --from=builder /app/envoy-eds-server .
 ENV GIN_MODE=release
-ENV HTTP_LISTEN_PORT=8086
 ENV GRPC_LISTEN_PORT=8086
+ENV HTTP_LISTEN_PORT=8089
+ENV EVICTION_TIMEOUT_IN_SEC=42
 ENV NODE_ID=node-0
 CMD ["/app/envoy-eds-server"]
