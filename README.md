@@ -19,7 +19,7 @@ The following environment variables must be defined:
 
 - `HTTP_LISTEN_PORT` choose the listen port for the HTTP server - the one where upstream hosts are registered / unregistered
 - `GRPC_LISTEN_PORT` choose the listen port for the gRPC server - the one consumed by Envoy.
-- `EVICTION_TIMEOUT_IN_SEC` choose the time interval to elapse in order to remove the EDS resource because of not receiving a heartbeat API call from the upstream host. Defaults to 42 seconds.
+- `EVICTION_TIMEOUT_IN_SEC` choose the time interval to elapse in order to remove the EDS resource because of not receiving a heartbeat API call from the upstream host. Defaults to 42 seconds. If set to zero then the Endpoints (EDS resources) are no more removed and are kept until the envoy-eds-server is restarted.
 
 To start a docker container from the pre-built image, run:
 
