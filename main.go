@@ -127,8 +127,9 @@ func main() {
 		for !exit {
 			select {
 			case <-evictionTicker.C:
-				httpServer.EvictHeartbeatTimeout()
-				continue
+				if intEvictionTimeout > 0 {
+					httpServer.EvictHeartbeatTimeout()
+				}
 			case <-stopChan:
 				exit = true
 				evictionTicker.Stop()
