@@ -2,7 +2,7 @@
 
 ## Description
 
-Envoy EDS server is a working Endpoint Discovery Service implementation. It stores in memory an upstream host list and allows any upstream host to register and reregister.
+Envoy EDS server is a working Endpoint Discovery Service implementation. It stores in memory an upstream host list and allows any upstream host to register and reregister. 
 
 Internally, envoy-eds-server starts two servers:
 
