@@ -1,12 +1,12 @@
 # envoy-eds-server
 
-## Intro
+## Description
 
 Envoy EDS server is a working Endpoint Discovery Service implementation. It stores in memory an upstream host list and allows any upstream host to register and reregister.
 
 Internally, envoy-eds-server starts two servers:
 
-- a gRPC server that is invoked by Envoy to fetch the list of upstream hosts.
+- a gRPC server that is invoked by Envoy to fetch the list of upstream hosts. It uses the go-control-plane library provided by the Envoy authors.
 - a HTTP REST API server where a new host self-registers and deregisters when graceful shutdown happens.
 
 Envoy makes use of gRPC client stream and is able to receive notifications once an upstream host is registered or unregistered; it does not need poll to update.
